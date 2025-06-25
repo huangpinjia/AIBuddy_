@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import os
 import json
 import requests
-from datetime import datetime
+from datetime import datetime, timezone
 import firebase_admin
 from firebase_admin import credentials, firestore
 from io import StringIO
@@ -86,100 +86,8 @@ def backup_to_firestore(user_id, role, content,current_grow_stage=None):
         db.collection("chat_logs").document(user_id).collection("messages").add({
             "role": role,
             "content": content,
-            "timestamp": datetime.utcnow(),
+            "timestamp": datetime.now(timezone.utc),
             "grow_stage": current_grow_stage
         })
     except Exception as e:
         print("❌ 備份失敗：", e)
-
-# === 首頁 ===
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-# === Chat 端點 ===
-@app.route("/chat", methods=["POST"])
-def chat():
-    data = request.get_json()
-    user_id = data.get("user_id", "web_user")
-    user_msg = data.get("message", "").strip()
-
-    if user_id not in chat_history:
-        chat_history[user_id] = [{"role": "system", "content": base_prompt}]
-        quiz_waiting[user_id] = False
-
-    # ✅ 若偵測到學生問「怎麼算」「公式」「等於」等，插入強制提醒
-    if any(word in user_msg for word in ["怎麼算", "公式", "等於", "算式", "=","怎麼求","求法"]):
-        chat_history[user_id].insert(1, {
-            "role": "system",
-            "content": "請記住：你不能直接給公式、定義或標準答案，請用生活化情境的具體數字問題與觀察問題，幫助學生一步步發現規律！每次說明後，請加入一句數值引導式反問句，例如：『你覺得每⋯會增加多少呢？可以怎麼想？』"
-        })
-
-    chat_history[user_id].append({"role": "user", "content": user_msg})
-
-    def is_greeting_by_gpt(message):
-        prompt = [
-            {"role": "system", "content": "請判斷以下句子是否是打招呼語，例如 '你好'、'hi'、'哈囉' 等等，如果是請只回答 True，如果不是請只回答 False。"},
-            {"role": "user", "content": message}
-        ]
-        response = ask_gpt(prompt)
-        return response.strip().lower() == "true"
-
-    current_grow_stage = classify_grow_stage(user_msg)
-    backup_to_firestore(user_id, "user", user_msg, current_grow_stage)
-
-    if len(chat_history[user_id]) == 2 and is_greeting_by_gpt(user_msg):
-        welcome = "你好呀！😊 今天你想一起學什麼主題呢？是感知器、多元決策樹、線性迴歸、K-近鄰演算法，還是貝氏分類器呢？你是想先了解概念？還是想看看例題怎麼解？還是其他的？你說說看～ ✨"
-        chat_history[user_id].append({"role": "assistant", "content": welcome})
-        backup_to_firestore(user_id, "assistant", welcome, current_grow_stage)
-        return jsonify({"reply": welcome})
-
-    if expresses_understanding(user_msg):
-        quiz_waiting[user_id] = True
-        chat_history[user_id].append({
-            "role": "user",
-            "content": "請根據剛才的主題出一題生活化且適合國中一年級生的題目讓我驗證理解，不需要再解釋剛才的內容。"
-        })
-
-    elif quiz_waiting.get(user_id, False):
-        quiz_waiting[user_id] = False
-        chat_history[user_id].append({
-            "role": "user",
-            "content": "請判斷我剛剛的回答是否正確，用自然語氣講出對或錯的理由，如果回答錯誤請補充生活例子解釋，並出一題類似的新題目讓我再試一次。"
-        })
-
-    ai_reply = ask_gpt(chat_history[user_id])
-    chat_history[user_id].append({"role": "assistant", "content": ai_reply})
-    backup_to_firestore(user_id, "assistant", ai_reply, current_grow_stage)
-
-    return jsonify({"reply": ai_reply})
-
-# === 查詢 logs ===
-@app.route("/logs", methods=["GET"])
-def get_logs():
-    user_id = request.args.get("user_id", "web_user")
-    output_format = request.args.get("format", "json")
-
-    try:
-        docs = db.collection("chat_logs").document(user_id).collection("messages").order_by("timestamp").stream()
-        logs = [doc.to_dict() for doc in docs]
-
-        if output_format == "csv":
-            si = StringIO()
-            cw = csv.DictWriter(si, fieldnames=["timestamp", "role", "content"])
-            cw.writeheader()
-            for row in logs:
-                cw.writerow(row)
-            output = si.getvalue()
-            return Response(output, mimetype="text/csv",
-                            headers={"Content-Disposition": f"attachment;filename={user_id}_chatlog.csv"})
-        else:
-            return jsonify(logs)
-
-    except Exception as e:
-        return jsonify({"error": str(e)})
-
-# === 啟動伺服器 ===
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
