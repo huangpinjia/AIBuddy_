@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <title>聊天機器人</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f0f0f0;
+      font-family: "Segoe UI", sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    #chat-container {
+      width: 540px;
+      height: 620px;
+      background-color: #fff;
+      border-radius: 20px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 2px solid #000;
+      position: relative;
+    }
+
+    #header {
+      background-color: #666;
+      color: white;
+      padding: 10px;
+      text-align: left;
+      font-weight: bold;
+    }
+
+    #header input {
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: none;
+      font-size: 14px;
+    }
+
+    #chatbox {
+      flex: 1;
+      padding: 20px 12px;
+      overflow-y: auto;
+      background-color: #f7f7f7;
+    }
+
+    .message {
+      display: flex;
+      margin: 10px 0;
+      max-width: 100%;
+    }
+
+    .bot {
+      justify-content: flex-start;
+    }
+
+    .user {
+      justify-content: flex-end;
+      margin-right: 8px;
+    }
+
+    .bubble {
+      position: relative;
+      padding: 10px 14px;
+      border-radius: 16px;
+      font-size: 15px;
+      line-height: 1.6;
+      word-break: break-word;
+      white-space: pre-wrap;
+      max-width: 320px;
+    }
+
+    .bot .bubble {
+      background-color: #c6dbc6;
+      border-bottom-left-radius: 4px;
+      color: #000;
+    }
+
+    .user .bubble {
+      background-color: #d8e1e8;
+      border-bottom-right-radius: 4px;
+      color: #000;
+      margin-left: 40px;
+      margin-right: 0;
+    }
+
+    .bot .bubble::before {
+      content: "";
+      position: absolute;
+      left: -8px;
+      top: 10px;
+      border-top: 8px solid transparent;
+      border-bottom: 8px solid transparent;
+      border-right: 8px solid #c6dbc6;
+    }
+
+    .user .bubble::after {
+      content: "";
+      position: absolute;
+      right: -8px;
+      top: 10px;
+      border-top: 8px solid transparent;
+      border-bottom: 8px solid transparent;
+      border-left: 8px solid #d8e1e8;
+    }
+
+    #input-area {
+      display: flex;
+      align-items: center;
+      border-top: 1px solid #ccc;
+      padding: 10px;
+      position: relative;
+      background-color: #fff;
+    }
+
+    #emojiInput {
+      flex: 1;
+      border: none;
+      background-color: #f0f0f0;
+      border-radius: 20px;
+      padding: 8px 14px;
+      font-size: 15px;
+      min-height: 36px;
+      max-height: 100px;
+      overflow-y: auto;
+      outline: none;
+    }
+
+    .emoji-icon {
+      font-size: 22px;
+      margin-left: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #emoji-bar {
+      display: none;
+      position: absolute;
+      bottom: 50px;
+      right: 20px;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+      padding: 8px;
+      z-index: 1000;
+    }
+
+    .emoji-option {
+      font-size: 20px;
+      margin: 0 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="chat-container">
+    <div id="header">
+      使用者名稱：
+      <input type="text" id="username" placeholder="請輸入名稱" />
+    </div>
+    <div id="chatbox"></div>
+    <div id="input-area">
+      <div id="emojiInput" contenteditable="true" placeholder="輸入訊息..."></div>
+      <div id="emoji-button" class="emoji-icon">😊</div>
+      <div id="emoji-bar">
+        <span class="emoji-option">😊</span>
+        <span class="emoji-option">😂</span>
+        <span class="emoji-option">👍</span>
+        <span class="emoji-option">😢</span>
+        <span class="emoji-option">❤️</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const inputBox = document.getElementById("emojiInput");
+    const emojiBar = document.getElementById("emoji-bar");
+    const trigger = document.getElementById("emoji-button");
+
+    inputBox.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    function sendMessage() {
+      const input = inputBox;
+      const msg = input.innerText.trim();
+      const username = document.getElementById("username").value.trim() || "web_user";
+
+      if (!msg) return;
+
+      addMessage("user", msg);
+      input.innerHTML = "";
+
+      fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: username, message: msg })
+      })
+        .then(res => res.json())
+        .then(data => addMessage("bot", data.reply));
+    }
+
+    function addMessage(sender, text) {
+      const box = document.getElementById("chatbox");
+      const wrapper = document.createElement("div");
+      wrapper.className = `message ${sender}`;
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.textContent = text;
+
+      wrapper.appendChild(bubble);
+      box.appendChild(wrapper);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    trigger.addEventListener("click", () => {
+      emojiBar.style.display = (emojiBar.style.display === "none") ? "block" : "none";
+    });
+
+    document.querySelectorAll(".emoji-option").forEach(el => {
+      el.addEventListener("click", () => {
+        insertEmojiAtCaret(el.textContent);
+        emojiBar.style.display = "none";
+      });
+    });
+
+    function insertEmojiAtCaret(emoji) {
+      const sel = window.getSelection();
+      if (!sel.rangeCount) return;
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      const textNode = document.createTextNode(emoji);
+      range.insertNode(textNode);
+      range.setStartAfter(textNode);
+      range.setEndAfter(textNode);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      inputBox.focus();
+    }
+  </script>
+</body>
+</html>
