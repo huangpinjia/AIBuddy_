@@ -6,6 +6,7 @@ import requests
 from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials, firestore
+from firebase_admin import initialize_app
 from io import StringIO
 import csv
 
@@ -16,16 +17,19 @@ GPT_API_KEY = os.getenv("GPT_API_KEY")
 
 # Firebase 初始化
 firebase_json = os.getenv("FIREBASE_KEY_JSON")
-cred = credentials.Certificate(json.loads(firebase_json))
+firebase_dict = json.loads(firebase_json)
+firebase_dict["private_key"] = firebase_dict["private_key"].replace("\\n", "\n")
+cred = credentials.Certificate(firebase_dict)
 firebase_admin.initialize_app(cred)
 db = firestore.client()
+
 
 # Flask App
 app = Flask(__name__, template_folder="templates")
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
 # === 載入 prompt_05.txt ===
-base_prompt = os.getenv("BASE_PROMPT")
+base_prompt = os.getenv("BASE_PROMPT", "尚未設定 BASE_PROMPT 環境變數")
 
 # === 混淆矩陣判別主題 ===
 def detect_topic(user_input):
