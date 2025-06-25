@@ -28,8 +28,7 @@ app = Flask(__name__, template_folder="templates")
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
 # === 載入 prompt_05.txt ===
-with open("prompt_05.txt", "r", encoding="utf-8") as f:
-    base_prompt = f.read()
+base_prompt = os.getenv("BASE_PROMPT", "尚未設定 BASE_PROMPT 環境變數")
 
 # === 混淆矩陣判別主題 ===
 def detect_topic(user_input):
