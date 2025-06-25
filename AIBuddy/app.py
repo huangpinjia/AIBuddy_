@@ -8,6 +8,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from io import StringIO
 import csv
+from firebase_admin import credentials, initialize_app
 
 # === 初始化 ===
 load_dotenv()
@@ -17,10 +18,10 @@ GPT_API_KEY = os.getenv("GPT_API_KEY")
 # Firebase 初始化
 firebase_json = os.getenv("FIREBASE_KEY_JSON")
 firebase_dict = json.loads(firebase_json)
-firebase_dict["private_key"] = firebase_dict["private_key"].replace("\\n", "\n")  
+firebase_dict["private_key"] = firebase_dict["private_key"].replace("\\n", "\n")
 cred = credentials.Certificate(firebase_dict)
 firebase_admin.initialize_app(cred)
-
+db = firestore.client()
 
 # Flask App
 app = Flask(__name__, template_folder="templates")
