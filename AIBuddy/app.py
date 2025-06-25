@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import os
 import json
 import requests
-from datetime import datetime
+from datetime import datetime, timezone
 import firebase_admin
 from firebase_admin import credentials, firestore
 from firebase_admin import initialize_app
@@ -91,7 +91,7 @@ def backup_to_firestore(user_id, role, content,current_grow_stage=None):
         db.collection("chat_logs").document(user_id).collection("messages").add({
             "role": role,
             "content": content,
-            "timestamp": datetime.utcnow(),
+            "timestamp": datetime.now(timezone.utc),
             "grow_stage": current_grow_stage
         })
         print("Firestore 寫入成功")
