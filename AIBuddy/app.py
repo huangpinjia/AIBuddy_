@@ -15,7 +15,8 @@ GPT_API_BASE = os.getenv("GPT_API_BASE")
 GPT_API_KEY = os.getenv("GPT_API_KEY")
 
 # Firebase 初始化
-cred = credentials.Certificate("firebase_config.json")
+firebase_json = os.getenv("FIREBASE_KEY_JSON")
+cred = credentials.Certificate(json.loads(firebase_json))
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
