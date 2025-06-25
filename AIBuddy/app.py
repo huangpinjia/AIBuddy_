@@ -85,18 +85,20 @@ def classify_grow_stage(user_message):
     return response.strip().upper()
 
 # === Firestore 備份 ===
-def backup_to_firestore(user_id, role, content,current_grow_stage=None):
+def backup_to_firestore(user_id, role, content, current_grow_stage=None):
     try:
-        print(f"📥 呼叫備份：{role=} {content[:30]=}")
+        print(f"📝 寫入前內容：{user_id=}, {role=}, {content[:20]=}, {current_grow_stage=}")
         db.collection("chat_logs").document(user_id).collection("messages").add({
             "role": role,
             "content": content,
             "timestamp": datetime.now(timezone.utc),
             "grow_stage": current_grow_stage
         })
-        print("Firestore 寫入成功")
+        print("✅ Firestore 寫入成功")
     except Exception as e:
-        print("備份失敗：", e)
+        print("❌ 備份失敗：", e)
+        import traceback
+        traceback.print_exc()
 
 # === 首頁 ===
 @app.route("/")
