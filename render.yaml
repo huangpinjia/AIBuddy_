@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: aibuddy-flask
+    env: python
+    buildCommand: "pip install -r AIBuddy/requirements.txt"
+    startCommand: "python AIBuddy/app.py"
