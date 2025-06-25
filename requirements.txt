@@ -1,7 +1,0 @@
-flask
-openai
-python-dotenv
-line-bot-sdk
-firebase-admin
-gunicorn
-flask-cors

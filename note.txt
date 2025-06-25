@@ -1,8 +1,0 @@
-& "C:\Users\pinji\Documents\ngork\ngrok.exe" http 5000
-
-https://api.chatanywhere.org/v1/chat/completions
-
-git add AIBuddy_web/templates/index.html
-git status
-git commit -m "撰寫更新內容"
-git push
